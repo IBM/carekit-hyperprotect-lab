@@ -1,0 +1,5 @@
+---
+# Repo name - change value as needed for testing (MBaaS is official repo)
+
+repo_name: IBM-HyperProtectMBaaS
+db:

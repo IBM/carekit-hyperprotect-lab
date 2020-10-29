@@ -1,0 +1,54 @@
+#################################################
+# HyperProtectBackendSDK - Ansible
+#################################################
+---
+- name: Configure Hyper Protect Virtual Server
+  hosts: all
+  become: true
+  tasks:
+    - name: Declaring variables from vars.yml file
+      include_vars:
+        file: vars.yml
+
+    - name: Install required system packages
+      apt: name={{ item }} state=latest update_cache=yes
+      loop: [ 'curl', 'npm', 'docker.io', 'ufw', 'docker-compose', 'git' ]
+      ignore_errors: true
+
+    - name: Clone github repo (SDK CareKit)
+      git:
+#          repo: https://github.com/Ry-is-me/HyperProtectBackendSDK-test.git # test/dev repo
+          repo: https://github.com/carekit-apple/IBM-HyperProtectMBaaS.git  # official MBaaS repo
+          dest: "$PWD/{{ repo_name }}"
+          force: yes
+
+    - name: "Create file on HPVS container for .env test"
+      copy:
+          content: "MONGO_DB={{ db }}"
+          dest: ~/{{ repo_name }}/.env
+
+    - name: Copy 'cert.pem' file from local to Virtual Server
+      copy:
+          src: "{{ playbook_dir }}/cert.pem"
+          dest: $PWD/{{ repo_name }}/src/
+
+    - name: Generating SSL/TLS certificates
+      shell: "$PWD/{{ repo_name }}/generate_certs.sh -c {{ inventory_hostname }} -r {{ repo_name }}"
+      ignore_errors: true
+
+    - pause: seconds=90
+    - name: Running setup via docker-compose.yml
+      docker_compose:
+          project_src: $PWD/{{ repo_name }}
+
+    - pause: seconds=20
+    - name: Running script to take copy of carekit-root.crt from BackendSDK container
+      shell: "bash $PWD/{{ repo_name }}/copy_cert.sh"
+
+    - name: Copy rootCA.crt to local machine for validation test with curl/browser
+      fetch:
+        src: $PWD/carekit-root.crt
+        dest: "{{ playbook_dir }}/"
+        mode: 0774
+        flat: yes
+

@@ -1,0 +1,39 @@
+#################################################
+# HyperProtectBackendSDK - Ansible (localhost)
+#################################################
+---
+- name: Configure Hyper Protect Virtual Server
+  hosts: localhost
+  become: true
+  tasks:
+    - name: Installing required 'pip' modules
+      pip:
+        name: docker-compose, docker
+
+    - name: Clone github repo (SDK CareKit)
+      git:
+          repo: https://github.com/Ry-is-me/HyperProtectBackendSDK-test.git
+#          repo: https://github.com/carekit-apple/HyperProtectBackendSDK.git    #actual SDK repo
+          dest: "{{ playbook_dir }}/HyperProtectBackendSDK-test"
+
+    - name: "Create file on HPVS container for .env test"
+      copy:
+          content: "MONGO_DB=localhost"
+          dest: "{{ playbook_dir }}/HyperProtectBackendSDK-test/.env"
+#          dest: ~/HyperProtectBackendSDK/.env
+
+    - name: Copy 'cert.pem' file to the app's src/ directory
+      copy:
+          src: "{{ playbook_dir }}/HyperProtectBackendSDK-test/certs/cert.pem"
+          dest: "{{ playbook_dir }}/HyperProtectBackendSDK-test/src/"
+#           src: /root/HyperProtectBackendSDK/cert.pem           #final copy src/dest when the repo is changed
+#           dest: /root/HyperProtectBackendSDK/src/
+
+    - name: Creating SSL certificates
+      shell: "bash {{ playbook_dir }}/HyperProtectBackendSDK-test/generate_certs.sh localhost"
+#      shell: "bash {{ playbook_dir }}/HyperProtectBackendSDK/generate_certs.sh localhost"
+
+    - name: Running setup via docker-compose.yml
+      docker_compose:
+          project_src: "{{ playbook_dir }}/HyperProtectBackendSDK-test"
+#          project_src: "{{ playbook_dir }}/HyperProtectBackendSDK"

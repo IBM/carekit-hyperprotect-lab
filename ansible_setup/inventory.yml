@@ -1,0 +1,3 @@
+[hosts]
+# if running locally local_setup.yml is already pointed towards 'localhost' and no change needs to be made
+#add HPVS public IP below this comment
